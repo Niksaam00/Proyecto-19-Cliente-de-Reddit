@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reddit Client</title>
+    <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+
+<body>
+
+    <header class="header">
+        <h2>Reddit Client</h2>
+        <p>Explora tus comunidades favoritas</p>
+    </header>
+
+    <main class="container">
+        <section id="boards" class="boards"></section>
+
+        <button id="addButton" class="add-button">+</button>
+    </main>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h3>Agregar Subreddit</h3>
+            <p>Escribe el nombre de la comunidad</p>
+
+            <form id="subredditForm">
+                <input type="text" id="subredditInput" placeholder="Ej: javascript" required>
+
+                <button type="submit">Agregar Subreddit</button>
+                <button type="button" id="closeButton" class="close-button">
+                    Cancelar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="./assets/js/javaScript.js"></script>
+</body>
+
+</html>
