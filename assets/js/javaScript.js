@@ -1,191 +1,264 @@
 
-const boards = document.getElementById("boards");
-const addButton = document.getElementById("addButton");
+const API = "https://jsonplaceholder.typicode.com/users/";
+
+const lanesContainer = document.getElementById("lanes");
+const addButton = document.getElementById("addLane");
 const modal = document.getElementById("modal");
-const closeButton = document.getElementById("closeButton");
-const subredditForm = document.getElementById("subredditForm");
-const subredditInput = document.getElementById("subredditInput");
+const formulario = document.getElementById("formulario");
+const inputUsuario = document.getElementById("numeroUsuario");
+const mensajeError = document.getElementById("mensajeError");
+const cancelar = document.getElementById("cancelar");
 
-let subreddits = JSON.parse(localStorage.getItem("subreddits")) || [
-    "learnprogramming",
-    "javascript"
-];
+const STORAGE_KEY = "carriles-usuarios";
 
-// Guarda los subreddits
-function saveSubreddits() {
-    localStorage.setItem("subreddits", JSON.stringify(subreddits));
+// Recuperamos los carriles guardados
+function getLanes() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+
+        if (saved === null) {
+            return [
+                { userId: 1 },
+                { userId: 2 }
+            ];
+        }
+
+        const data = JSON.parse(saved);
+
+        if (!Array.isArray(data)) {
+            return [];
+        }
+
+        return data.filter(lane =>
+            Number.isInteger(lane.userId) &&
+            lane.userId >= 1 &&
+            lane.userId <= 10
+        );
+
+    } catch (error) {
+        return [];
+    }
 }
 
-// Crea un carril
-function createBoard(subreddit) {
-    const board = document.createElement("div");
-    board.className = "board";
+let lanes = getLanes();
+
+// Guardamos los carriles
+function saveLanes() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(lanes));
+}
+
+// Consultamos un usuario en la API
+async function getUser(userId) {
+    let response;
+
+    try {
+        response = await fetch(API + userId);
+    } catch (error) {
+        throw new Error("No se pudo conectar con la API.");
+    }
+
+    if (response.status === 404) {
+        throw new Error("El usuario no existe.");
+    }
+
+    if (!response.ok) {
+        throw new Error("Error del servidor: " + response.status);
+    }
+
+    return await response.json();
+}
+
+// Mostramos mensajes de carga o error
+function showMessage(card, message, isError = false) {
+    card.innerHTML = "";
+
+    const paragraph = document.createElement("p");
+    paragraph.className = "status";
+
+    if (isError) {
+        paragraph.classList.add("error");
+    }
+
+    paragraph.textContent = message;
+    card.appendChild(paragraph);
+}
+
+// Creamos una fila para mostrar los datos
+function createRow(label, value) {
+    const row = document.createElement("div");
+    row.className = "dato";
+
+    const title = document.createElement("div");
+    title.className = "etiqueta";
+    title.textContent = label;
+
+    const text = document.createElement("div");
+    text.className = "valor";
+    text.textContent = value;
+
+    row.append(title, text);
+
+    return row;
+}
+
+// Mostramos la información del usuario
+function showUser(card, user) {
+    card.innerHTML = "";
+
+    card.append(
+        createRow("Nombre", user.name),
+        createRow("Usuario", "@" + user.username),
+        createRow("Correo", user.email),
+        createRow("Teléfono", user.phone),
+        createRow("Ciudad", user.address.city),
+        createRow("Empresa", user.company.name),
+        createRow("Sitio web", user.website)
+    );
+}
+
+// Cargamos o actualizamos los datos
+async function loadUser(userId, card) {
+    showMessage(card, "Cargando datos...");
+
+    try {
+        const user = await getUser(userId);
+        showUser(card, user);
+    } catch (error) {
+        showMessage(card, error.message, true);
+    }
+}
+
+// Creamos un carril
+function createLane(userId) {
+    const lane = document.createElement("div");
+    lane.className = "lane";
 
     const header = document.createElement("div");
-    header.className = "board-header";
+    header.className = "lane-header";
 
-    const title = document.createElement("h3");
-    title.textContent = "/r/" + subreddit;
+    const title = document.createElement("h2");
+    title.textContent = "Usuario " + userId;
 
     const menuButton = document.createElement("button");
     menuButton.className = "menu-button";
     menuButton.textContent = "⋮";
 
     const menu = document.createElement("div");
-    menu.className = "menu";
+    menu.className = "menu hidden";
 
     const refreshButton = document.createElement("button");
-    refreshButton.textContent = "Actualizar";
+    refreshButton.textContent = "Refresh";
 
     const deleteButton = document.createElement("button");
-    deleteButton.textContent = "Eliminar";
+    deleteButton.textContent = "Delete";
 
-    const postsContainer = document.createElement("div");
+    menu.append(refreshButton, deleteButton);
+    header.append(title, menuButton, menu);
 
+    const card = document.createElement("div");
+    card.className = "user-card";
+
+    lane.append(header, card);
+    lanesContainer.appendChild(lane);
+
+    // Abrimos o cerramos el menú
     menuButton.addEventListener("click", () => {
-        document.querySelectorAll(".menu").forEach(item => {
-            if (item !== menu) {
-                item.classList.remove("active");
-            }
-        });
-
-        menu.classList.toggle("active");
+        menu.classList.toggle("hidden");
     });
 
-    // Actualiza las publicaciones
+    // Actualizamos el usuario
     refreshButton.addEventListener("click", () => {
-        menu.classList.remove("active");
-        loadPosts(subreddit, postsContainer);
+        menu.classList.add("hidden");
+        loadUser(userId, card);
     });
 
-    // Elimina el carril
+    // Eliminamos el carril
     deleteButton.addEventListener("click", () => {
-        subreddits = subreddits.filter(item => item !== subreddit);
-        saveSubreddits();
-        board.remove();
+        lanes = lanes.filter(item => item.userId !== userId);
+
+        saveLanes();
+        renderLanes();
     });
 
-    menu.appendChild(refreshButton);
-    menu.appendChild(deleteButton);
-
-    header.appendChild(title);
-    header.appendChild(menuButton);
-    header.appendChild(menu);
-
-    board.appendChild(header);
-    board.appendChild(postsContainer);
-
-    boards.appendChild(board);
-
-    loadPosts(subreddit, postsContainer);
+    // Cargamos los datos del usuario
+    loadUser(userId, card);
 }
 
-// Consulta Reddit
-async function loadPosts(subreddit, container) {
-    container.innerHTML = '<p class="loading">Cargando publicaciones...</p>';
+// Dibujamos todos los carriles
+function renderLanes() {
+    lanesContainer.innerHTML = "";
 
-    try {
-        const response = await fetch(
-            `https://www.reddit.com/r/${encodeURIComponent(subreddit)}.json?limit=10`
-        );
-
-        if (!response.ok) {
-            throw new Error("No se pudo encontrar el subreddit");
-        }
-
-        const data = await response.json();
-
-        const posts = data.data.children;
-
-        container.innerHTML = "";
-
-        if (posts.length === 0) {
-            container.innerHTML = '<p class="empty">No hay publicaciones.</p>';
-            return;
-        }
-
-        // Muestra las publicaciones
-        posts.forEach(item => {
-            const post = item.data;
-
-            const postElement = document.createElement("div");
-            postElement.className = "post";
-
-            const score = document.createElement("p");
-            score.className = "post-score";
-            score.textContent = "▲ " + post.score + " votos";
-
-            const title = document.createElement("p");
-            title.className = "post-title";
-
-            const link = document.createElement("a");
-            link.textContent = post.title;
-            link.href = "https://www.reddit.com" + post.permalink;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-
-            const author = document.createElement("p");
-            author.className = "post-author";
-            author.textContent = "u/" + post.author;
-
-            title.appendChild(link);
-
-            postElement.appendChild(score);
-            postElement.appendChild(title);
-            postElement.appendChild(author);
-
-            container.appendChild(postElement);
-        });
-
-    } catch (error) {
-        container.innerHTML =
-            '<p class="error">Error al cargar. Verifica el nombre o intenta actualizar.</p>';
-    }
+    lanes.forEach(lane => {
+        createLane(lane.userId);
+    });
 }
 
-// Abre la ventana para agregar
-addButton.addEventListener("click", () => {
-    modal.classList.add("active");
-    subredditInput.focus();
-});
+// Abrimos la ventana para agregar usuarios
+function openModal() {
+    modal.classList.remove("hidden");
+    inputUsuario.value = "";
+    mensajeError.textContent = "";
+    inputUsuario.focus();
+}
 
-// Cierra la ventana
-closeButton.addEventListener("click", () => {
-    modal.classList.remove("active");
-    subredditForm.reset();
-});
+// Cerramos la ventana
+function closeModal() {
+    modal.classList.add("hidden");
+}
 
-// Agrega un nuevo subreddit
-subredditForm.addEventListener("submit", (event) => {
+// Agregamos un nuevo usuario
+async function addLane(event) {
     event.preventDefault();
 
-    const name = subredditInput.value.trim().replace(/^\/?r\//i, "");
+    const userId = Number(inputUsuario.value);
 
-    if (!/^[a-zA-Z0-9_]+$/.test(name)) {
-        alert("Escribe un nombre de subreddit válido.");
+    // Validamos el número
+    if (!Number.isInteger(userId) || userId < 1 || userId > 10) {
+        mensajeError.textContent = "Escribe un número del 1 al 10.";
         return;
     }
 
-    if (subreddits.includes(name.toLowerCase())) {
-        alert("Este subreddit ya existe.");
+    // Comprobamos que no esté repetido
+    if (lanes.some(lane => lane.userId === userId)) {
+        mensajeError.textContent = "Este usuario ya está agregado.";
         return;
     }
 
-    subreddits.push(name.toLowerCase());
+    const submitButton = formulario.querySelector(".submit-button");
 
-    saveSubreddits();
+    submitButton.disabled = true;
+    mensajeError.textContent = "Buscando usuario...";
 
-    createBoard(name.toLowerCase());
+    try {
+        // Verificamos que el usuario exista
+        await getUser(userId);
 
-    modal.classList.remove("active");
-    subredditForm.reset();
-});
+        // Guardamos el nuevo carril
+        lanes.push({ userId: userId });
 
-// Carga los carriles guardados
-function initializeApp() {
-    subreddits.forEach(subreddit => {
-        createBoard(subreddit);
-    });
+        saveLanes();
+        renderLanes();
+
+        closeModal();
+
+    } catch (error) {
+        mensajeError.textContent = error.message;
+    } finally {
+        submitButton.disabled = false;
+    }
 }
 
-initializeApp();
+// Conectamos los botones
+addButton.addEventListener("click", openModal);
+cancelar.addEventListener("click", closeModal);
+formulario.addEventListener("submit", addLane);
+
+// Cerramos el popup al hacer clic fuera
+modal.addEventListener("click", event => {
+    if (event.target === modal) {
+        closeModal();
+    }
+});
+
+// Iniciamos la aplicación
+renderLanes();

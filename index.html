@@ -1,43 +1,55 @@
+
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reddit Client</title>
+    <title>Cliente de Usuarios</title>
     <link rel="stylesheet" href="./assets/css/style.css">
 </head>
-
 <body>
 
     <header class="header">
-        <h2>Reddit Client</h2>
-        <p>Explora tus comunidades favoritas</p>
+        <div>
+            <h1>Cliente de Usuarios</h1>
+            <p>Explora usuarios desde JSONPlaceholder</p>
+        </div>
     </header>
 
-    <main class="container">
-        <section id="boards" class="boards"></section>
+    <main>
+        <section id="lanes" class="lanes"></section>
 
-        <button id="addButton" class="add-button">+</button>
+        <div class="add-container">
+            <button id="addLane" class="add-button">+</button>
+        </div>
     </main>
 
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <h3>Agregar Subreddit</h3>
-            <p>Escribe el nombre de la comunidad</p>
+    <div id="modal" class="modal hidden">
+        <form id="formulario" class="modal-content">
+            <label for="numeroUsuario">
+                Escribe el número del usuario (del 1 al 10)
+            </label>
 
-            <form id="subredditForm">
-                <input type="text" id="subredditInput" placeholder="Ej: javascript" required>
+            <input
+                type="number"
+                id="numeroUsuario"
+                placeholder="Ejemplo: 1"
+                min="1"
+                max="10"
+            >
 
-                <button type="submit">Agregar Subreddit</button>
-                <button type="button" id="closeButton" class="close-button">
-                    Cancelar
-                </button>
-            </form>
-        </div>
+            <p id="mensajeError"></p>
+
+            <button type="submit" class="submit-button">
+                Añadir usuario
+            </button>
+
+            <button type="button" id="cancelar" class="cancel-button">
+                Cancelar
+            </button>
+        </form>
     </div>
 
     <script src="./assets/js/javaScript.js"></script>
 </body>
-
 </html>
